@@ -23,17 +23,14 @@ import net.playeranalytics.plan.gathering.listeners.events.PlanFabricEvents;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @Mixin({ServerHandshakeNetworkHandler.class, LocalServerHandshakeNetworkHandler.class})
 public class ClientToServerHandshakePacketMixin {
 
-    @Inject(method = "onHandshake", at = @At(value = "INVOKE", target = "Lnet/minecraft/server/network/ServerHandshakeNetworkHandler;onHandshake(Lnet/minecraft/network/packet/c2s/handshake/HandshakeC2SPacket;)V"))
-    public static void onClientHandshakeFromNetwork(HandshakeC2SPacket packet) {
+    @Inject(method = "onHandshake", at = @At("HEAD"))
+    private void onClientHandshake(HandshakeC2SPacket packet, CallbackInfo ci) {
         PlanFabricEvents.ON_HANDSHAKE.invoker().onHandshake(packet);
     }
 
-    @Inject(method = "onHandshake", at = @At(value = "INVOKE", target = "Lnet/minecraft/server/network/LocalServerHandshakeNetworkHandler;onHandshake(Lnet/minecraft/network/packet/c2s/handshake/HandshakeC2SPacket;)V"))
-    public static void onClienthandshakeFromLocal(HandshakeC2SPacket packet) {
-        PlanFabricEvents.ON_HANDSHAKE.invoker().onHandshake(packet);
-    }
 }
