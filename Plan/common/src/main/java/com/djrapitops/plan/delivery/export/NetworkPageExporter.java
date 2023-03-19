@@ -96,7 +96,7 @@ public class NetworkPageExporter extends FileExporter {
     }
 
     private void exportHtml(ExportPaths exportPaths, Path toDirectory) throws IOException {
-        if (config.isTrue(PluginSettings.FRONTEND_BETA)) return;
+        if (config.isFalse(PluginSettings.LEGACY_FRONTEND)) return;
 
         Path to = toDirectory
                 .resolve("network")
@@ -126,6 +126,7 @@ public class NetworkPageExporter extends FileExporter {
                 "network/sessions",
                 "network/playerbase",
                 "network/join-addresses",
+                "network/retention",
                 "network/players",
                 "network/geolocations",
                 "network/plugins-overview",
@@ -133,7 +134,7 @@ public class NetworkPageExporter extends FileExporter {
     }
 
     private void exportReactRedirects(Path toDirectory) throws IOException {
-        if (config.isFalse(PluginSettings.FRONTEND_BETA)) return;
+        if (config.isTrue(PluginSettings.LEGACY_FRONTEND)) return;
 
         exportReactRedirects(toDirectory, files, config, getRedirections());
     }
@@ -166,7 +167,9 @@ public class NetworkPageExporter extends FileExporter {
                 "graph?type=uniqueAndNew",
                 "network/pingTable",
                 "sessions",
-                "extensionData?server=" + serverUUID
+                "extensionData?server=" + serverUUID,
+                "retention",
+                "joinAddresses"
         );
     }
 
@@ -207,7 +210,7 @@ public class NetworkPageExporter extends FileExporter {
     }
 
     private void exportRequiredResources(ExportPaths exportPaths, Path toDirectory) throws IOException {
-        if (config.isTrue(PluginSettings.FRONTEND_BETA)) return;
+        if (config.isFalse(PluginSettings.LEGACY_FRONTEND)) return;
 
         exportResources(exportPaths, toDirectory,
                 "./img/Flaticon_circle.png",

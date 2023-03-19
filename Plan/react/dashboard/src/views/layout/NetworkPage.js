@@ -13,7 +13,8 @@ import {
     faSearch,
     faServer,
     faUserGroup,
-    faUsers
+    faUsers,
+    faUsersViewfinder
 } from "@fortawesome/free-solid-svg-icons";
 import {useAuth} from "../../hooks/authenticationHook";
 import Sidebar from "../../components/navigation/Sidebar";
@@ -26,6 +27,8 @@ import MainPageRedirect from "../../components/navigation/MainPageRedirect";
 import {ServerExtensionContextProvider, useServerExtensionContext} from "../../hooks/serverExtensionDataContext";
 import {iconTypeToFontAwesomeClass} from "../../util/icons";
 import {staticSite} from "../../service/backendConfiguration";
+
+const HelpModal = React.lazy(() => import("../../components/modal/HelpModal"));
 
 const NetworkSidebar = () => {
     const {t, i18n} = useTranslation();
@@ -75,7 +78,7 @@ const NetworkSidebar = () => {
                         href: "playerbase"
                     },
                     {name: 'html.label.joinAddresses', icon: faLocationArrow, href: "join-addresses"},
-                    // {name: 'html.label.playerRetention', icon: faUsersViewfinder, href: "retention"},
+                    {name: 'html.label.playerRetention', icon: faUsersViewfinder, href: "retention"},
                     {name: 'html.label.playerList', icon: faUserGroup, href: "players"},
                     {name: 'html.label.geolocations', icon: faGlobe, href: "geolocations"},
                 ]
@@ -85,7 +88,7 @@ const NetworkSidebar = () => {
             {name: 'html.label.pluginsOverview', icon: faCubes, href: "plugins-overview"}
         ]
 
-        if (extensionData) {
+        if (extensionData?.extensions) {
             extensionData.extensions.filter(extension => extension.wide)
                 .map(extension => extension.extensionInformation)
                 .map(info => {
@@ -138,6 +141,7 @@ const ServerPage = () => {
                         </main>
                         <aside>
                             <ColorSelectorModal/>
+                            <React.Suspense fallback={""}><HelpModal/></React.Suspense>
                         </aside>
                     </div>
                 </div>

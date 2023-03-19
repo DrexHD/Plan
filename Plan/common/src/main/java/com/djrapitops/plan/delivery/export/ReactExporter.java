@@ -74,6 +74,7 @@ public class ReactExporter extends FileExporter {
         exportAsset(toDirectory, "logo512.png");
         exportAsset(toDirectory, "manifest.json");
         exportAsset(toDirectory, "robots.txt");
+        exportAsset(toDirectory, "pageExtensionApi.js");
         exportStaticBundle(toDirectory);
         exportLocaleJson(toDirectory.resolve("locale"));
         exportMetadataJson(toDirectory.resolve("metadata"));
@@ -109,8 +110,8 @@ public class ReactExporter extends FileExporter {
             } else if (path.endsWith(".js")) {
                 String withReplacedConstants = StringUtils.replaceEach(
                         resource.asString(),
-                        new String[]{"PLAN_BASE_ADDRESS", "PLAN_EXPORTED_VERSION", "n.p=\"/\""},
-                        new String[]{config.get(WebserverSettings.EXTERNAL_LINK), "true", "n.p=\"" + getBasePath() + "/\""}
+                        new String[]{"PLAN_BASE_ADDRESS", "PLAN_EXPORTED_VERSION", ".p=\"/\""},
+                        new String[]{config.get(WebserverSettings.EXTERNAL_LINK), "true", ".p=\"" + getBasePath() + "/\""}
                 );
                 export(to, withReplacedConstants);
             } else {
@@ -140,7 +141,9 @@ public class ReactExporter extends FileExporter {
         String contents = files.getResourceFromJar("web/index.html")
                 .asString();
         String basePath = getBasePath();
-        contents = StringUtils.replace(contents, "/static", basePath + "/static");
+        contents = StringUtils.replaceEach(contents,
+                new String[]{"/static", "/pageExtensionApi.js"},
+                new String[]{basePath + "/static", basePath + "/pageExtensionApi.js"});
 
         export(toDirectory.resolve("index.html"), contents);
     }

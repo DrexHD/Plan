@@ -17,6 +17,7 @@
 package com.djrapitops.plan.delivery.web;
 
 import com.djrapitops.plan.delivery.web.resource.WebResource;
+import com.djrapitops.plan.delivery.webserver.Addresses;
 import com.djrapitops.plan.settings.config.PlanConfig;
 import com.djrapitops.plan.settings.config.ResourceSettings;
 import com.djrapitops.plan.settings.locale.Locale;
@@ -26,9 +27,11 @@ import com.djrapitops.plan.storage.file.Resource;
 import com.djrapitops.plan.utilities.dev.Untrusted;
 import com.djrapitops.plan.utilities.logging.ErrorContext;
 import com.djrapitops.plan.utilities.logging.ErrorLogger;
+import dagger.Lazy;
 import net.playeranalytics.plugin.server.PluginLogger;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.text.TextStringBuilder;
+import org.jetbrains.annotations.Nullable;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
@@ -55,18 +58,21 @@ public class ResourceSvc implements ResourceService {
     private final Locale locale;
     private final PluginLogger logger;
     private final ErrorLogger errorLogger;
+    private final Lazy<Addresses> addresses;
 
     @Inject
     public ResourceSvc(
             PublicHtmlFiles publicHtmlFiles,
             PlanConfig config,
             Locale locale,
+            Lazy<Addresses> addresses,
             PluginLogger logger,
             ErrorLogger errorLogger
     ) {
         this.publicHtmlFiles = publicHtmlFiles;
         this.resourceSettings = config.getResourceSettings();
         this.locale = locale;
+        this.addresses = addresses;
         this.logger = logger;
         this.errorLogger = errorLogger;
         this.snippets = new HashSet<>();
@@ -94,20 +100,8 @@ public class ResourceSvc implements ResourceService {
         }
     }
 
-    private WebResource applySnippets(String pluginName, @Untrusted String fileName, WebResource resource) {
-        Map<Position, StringBuilder> byPosition = calculateSnippets(fileName);
-        if (byPosition.isEmpty()) return resource;
-
-        String html = applySnippets(resource, byPosition);
-        return WebResource.create(html);
-    }
-
-    private String applySnippets(WebResource resource, Map<Position, StringBuilder> byPosition) {
-        String html = resource.asString();
-        if (html == null) {
-            return "Error: Given resource did not support WebResource#asString method properly and returned 'null'";
-        }
-
+    @Nullable
+    private static String applyLegacy(Map<Position, StringBuilder> byPosition, String html) {
         StringBuilder toHead = byPosition.get(Position.PRE_CONTENT);
         if (toHead != null) {
             html = StringUtils.replaceOnce(html, "</head>", toHead.append("</head>").toString());
@@ -128,6 +122,35 @@ public class ResourceSvc implements ResourceService {
         }
 
         return html;
+    }
+
+    private WebResource applySnippets(String pluginName, @Untrusted String fileName, WebResource resource) {
+        Map<Position, StringBuilder> byPosition = calculateSnippets(fileName);
+        if (byPosition.isEmpty()) return resource;
+
+        String html = applySnippets(fileName, resource, byPosition);
+        return WebResource.create(html);
+    }
+
+    private String applySnippets(@Untrusted String fileName, WebResource resource, Map<Position, StringBuilder> byPosition) {
+        String html = resource.asString();
+        if (html == null) {
+            return "Error: Given resource did not support WebResource#asString method properly and returned 'null'";
+        }
+
+        if ("index.html".equals(fileName)) {
+            StringBuilder toHead = byPosition.get(Position.PRE_CONTENT);
+            if (toHead != null) {
+                html = StringUtils.replaceOnce(html, "</head>", toHead.append("</head>").toString());
+            }
+            StringBuilder toBody = byPosition.get(Position.PRE_MAIN_SCRIPT);
+            if (toBody != null) {
+                html = StringUtils.replaceOnce(html, "<script></script>", toBody.toString());
+            }
+            return html;
+        } else {
+            return applyLegacy(byPosition, html);
+        }
     }
 
     private Map<Position, StringBuilder> calculateSnippets(@Untrusted String fileName) {
@@ -191,8 +214,8 @@ public class ResourceSvc implements ResourceService {
     public void addScriptsToResource(String pluginName, String fileName, Position position, String... jsSources) {
         checkParams(pluginName, fileName, position, jsSources);
 
-        String snippet = new TextStringBuilder("<script src=\"")
-                .appendWithSeparators(jsSources, "\"></script><script src=\"")
+        String snippet = new TextStringBuilder("<script src=\"").append(getBasePath())
+                .appendWithSeparators(jsSources, "\"></script><script src=\"" + getBasePath())
                 .append("\"></script>").build();
         snippets.add(new Snippet(pluginName, fileName, position, snippet));
         if (!"Plan".equals(pluginName)) {
@@ -222,13 +245,19 @@ public class ResourceSvc implements ResourceService {
     public void addStylesToResource(String pluginName, String fileName, Position position, String... cssSources) {
         checkParams(pluginName, fileName, position, cssSources);
 
-        String snippet = new TextStringBuilder("<link href=\"")
-                .appendWithSeparators(cssSources, "\" rel=\"stylesheet\"></link><link href=\"")
+        String snippet = new TextStringBuilder("<link href=\"").append(getBasePath())
+                .appendWithSeparators(cssSources, "\" rel=\"stylesheet\"></link><link href=\"" + getBasePath())
                 .append("\" rel=\"stylesheet\">").build();
         snippets.add(new Snippet(pluginName, fileName, position, snippet));
         if (!"Plan".equals(pluginName)) {
             logger.info(locale.getString(PluginLang.API_ADD_RESOURCE_CSS, pluginName, fileName, position.cleanName()));
         }
+    }
+
+    private String getBasePath() {
+        String address = addresses.get().getMainAddress()
+                .orElseGet(addresses.get()::getFallbackLocalhostAddress);
+        return addresses.get().getBasePath(address);
     }
 
     private static class Snippet {
