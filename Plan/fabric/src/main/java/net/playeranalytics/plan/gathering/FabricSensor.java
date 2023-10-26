@@ -21,6 +21,7 @@ import com.djrapitops.plan.gathering.domain.PluginMetadata;
 import net.fabricmc.loader.api.ModContainer;
 import net.fabricmc.loader.impl.FabricLoaderImpl;
 import net.minecraft.entity.Entity;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.dedicated.MinecraftDedicatedServer;
 import net.minecraft.server.world.ServerWorld;
 
@@ -48,9 +49,9 @@ public class FabricSensor implements ServerSensor<ServerWorld> {
         //Returns the ticks per second of the last 100 ticks
         double totalTickLength = 0;
         int count = 0;
-        for (long tickLength : server.lastTickLengths) {
+        for (long tickLength : server.method_54835()) {
             if (tickLength == 0) continue; // Ignore uninitialized values in array
-            totalTickLength += Math.max(tickLength, TimeUnit.MILLISECONDS.toNanos(50));
+            totalTickLength += Math.max(tickLength, server.method_54833().method_54750());
             count++;
         }
         if (count == 0) {
